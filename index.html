@@ -7,9 +7,18 @@
 		<script src="jquery.armyKnife.2.0.js"></script>
 	</head>
 	<body>
-		<div id="testDiv"></div>
+		<div id="testDiv">
+			<img src="http://placehold.it/350x150&text=Img+1" />
+			<img src="http://placehold.it/350x150&text=Img+2" />
+			<img src="http://placehold.it/350x150&text=Img+3" />
+		</div>
 		<script>
-			$("#testDiv").armyKnife();
+			$("#testDiv").armyKnife({
+				generateNav	:	true,
+				autoRotate	:	true
+			}, function () {
+				console.log("Running callback function");
+			});
 		</script>
 	</body>
 </html>
