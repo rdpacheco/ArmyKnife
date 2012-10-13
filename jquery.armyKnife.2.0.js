@@ -4,20 +4,29 @@
 *	ArmyKnife Object and jQuery Plugin 2.0
 *
 */
-var ArmyKnife	=	(function ($) {
+var ArmyKnife	=	(function ($, document) {
 	"use strict";
 
 	/**
+	
 	*
 	*	Private properties and methods
 	*
 	*/
-	var Utils	=	{
+	var self,
+		Utils	=	{
 			clone	:	function (obj_elem) {	// Relies on jQuery
 				return $(obj_elem).clone();
 			},
 			createElem	:	function (str_elem) {
 				return document.createElement(str_elem);
+			},
+			each	:	function (arr, fn) {
+				var i,
+					len;
+				for (i = 0, len = arr.length; i < len; i += 1) {
+					fn.call(self, i, arr[i], arr);
+				}
 			},
 			extend	:	function () {	// Relies on jQuery
 				return $.extend.apply(this, Utils.slice.call(arguments));
@@ -39,6 +48,13 @@ var ArmyKnife	=	(function ($) {
 			},
 			prepSections	:	function () {
 				console.log("Prepping Sections");
+				Utils.each(self.sections, function (i, e) {
+					if (i === self.options.startingSection) {
+						AK.setSection.active.call(e);
+					} else {
+						AK.setSection.hidden.call(e);
+					}
+				});
 			}
 		};
 
@@ -86,12 +102,28 @@ var ArmyKnife	=	(function ($) {
 		"showSectionButtons"	:	false,
 		"sectionButtonClass"	:	AK.prefix + "-Btn",
 		"sectionButtonCodeNext"	:	Utils.clone(Elems.button),
-		//"sectionButtonCodePrev"	:	this.Elems.b.clone(),
+		"sectionButtonCodePrev"	:	Utils.clone(Elems.button),
 		"sectionOnEnter"		:	false,
 		"sectionOnExit"			:	false,
 		"sectionBeforeEnter"	:	false,
 		"sectionBeforeExit"		:	false,
 		"useContinue"			:	false
+	};
+	AK.setSection	=	{
+		active	:	function (i) {
+			console.log(this);
+			this.setAttribute("class", AK.prefix + "-section-active");
+		},
+		inactive	:	function (i) {
+			this.setAttribute("class", AK.prefix + "-section-inactive");
+		},
+		hidden	:	function (i, dir) {
+			if (dir || dir < 0) {
+				this.setAttribute("class", AK.prefix + "-section-hiddenRight");
+			} else {
+				this.setAttribute("class", AK.prefix + "-section-hiddenLeft");
+			}
+		}
 	};
 
 	/**
@@ -104,6 +136,7 @@ var ArmyKnife	=	(function ($) {
 			console.log("Generating Nav");
 		},
 		init	:	function (uOptions, callback) {
+			self	=	this;
 			var options	=	Utils.extend({}, AK.defaults, uOptions);
 
 			// Attach options and sections
@@ -127,7 +160,7 @@ var ArmyKnife	=	(function ($) {
 		}
 	};
 	return AK;
-}(jQuery));
+}(jQuery, document));
 
 /**
 *
