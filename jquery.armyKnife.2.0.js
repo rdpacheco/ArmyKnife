@@ -4,7 +4,7 @@
 *	ArmyKnife Object and jQuery Plugin 2.0
 *
 */
-var ArmyKnife	=	(function ($, window, document) {
+var ArmyKnife	=	(function ($, win, doc, con) {
 	"use strict";
 
 	/**
@@ -15,11 +15,17 @@ var ArmyKnife	=	(function ($, window, document) {
 	*/
 	var self,
 		Utils	=	{
+			before	:	function (newElem, ref) {
+				ref.parentNode.insertBefore(newElem, ref);
+			},
+			bind	:	function (str_event, elem, fn) {	// Relies on jQuery
+				$(elem).on(str_event, fn);
+			},
 			clone	:	function (obj_elem) {	// Relies on jQuery
-				return $(obj_elem).clone();
+				return $.clone(obj_elem);
 			},
 			createElem	:	function (str_elem) {
-				return document.createElement(str_elem);
+				return doc.createElement(str_elem);
 			},
 			each	:	function (arr, fn) {
 				var i,
@@ -47,6 +53,9 @@ var ArmyKnife	=	(function ($, window, document) {
 				});
 				return passed;
 			},
+			replace	:	function (oldElem, newElem) {	// Relies on jQuery
+				$(oldElem).replaceWith(newElem);
+			},
 			slice	:	function (arr) {
 				return Array.prototype.slice.call(arr);
 			}
@@ -54,11 +63,15 @@ var ArmyKnife	=	(function ($, window, document) {
 		Vars	=	{
 		},
 		Elems	=	{
-			button	:	Utils.createElem("button").setAttribute("href", "#")
+			button	:	Utils.createElem("button"),
+			anchor	:	(function () {
+				var  b	=	Utils.createElem("a");
+				b.setAttribute("href", "#");
+				return b;
+			}())
 		},
 		Methods	=	{
 			prepSections	:	function () {
-				console.log("Prepping Sections");
 
 				// Run setSection on all sections
 				Utils.each(self.sections, function (i, e) {
@@ -78,6 +91,7 @@ var ArmyKnife	=	(function ($, window, document) {
 	*
 	*/
 	function AK(elem, uOptions, callback) {
+		self	=	this;
 		this.elem	=	elem;
 		this.init(uOptions, callback);
 	}
@@ -89,29 +103,37 @@ var ArmyKnife	=	(function ($, window, document) {
 	*/
 	AK.prefix	=	"armyKnife";
 	AK.defaults	=	{
+
+		// Sections
+		sections	:	"> *",
+		startingSection	:	0,
+
+		// Rotation
+		autoRotate	:	false,
+		autoRotateDelay	:	5000,
+		reverse	:	false,
+
+		// Navigation
+		generateNav	:	false,
+		navType	:	"numeric",	//	[numeric|custom]
+		navID	:	false,
+		navClass	:	AK.prefix + "-nav",
+		navItem	:	function (section, index) {
+			var btn	=	Utils.clone(Elems.anchor);
+			if (self.options.navType === "numeric") {
+				btn.innerHTML	=	index;
+			} else {
+				btn.innerHTML	=	section.getAttribute("title") || "Section #" + index;
+			}
+			return btn;
+		},
+		navTrigger	:	"click",
+
 		"speed"					:	300,
-		"sections"				:	"> *",
-		"startingSection"		:	0,
 		"easing"				:	"swing",				//	[swing|linear]
 		"transition"			:	"none",					//	[none|slide|slideIn|slideOut|fade|fadeIn|fadeOut]
 		"autoResize"			:	false,
 		"resizeSpeed"			:	200,
-		"autoRotate"			:	false,
-		"autoRotateDelay"		:	5000,
-		"reverse"				:	false,
-		"generateNav"			:	false,
-		"navType"				:	"empty",				//	[empty|numeric|text|custom]
-		"navItemSource"			:	function (s) {			//	REQUIRED WHEN navType = 'text' OR 'custom'; RESPECTIVE SECTION IS PASSED FOR EASY REFERENCE
-			return " ";
-		},
-		"navItemCode"			:	function (s) {			//	REQUIRED WHEN navType = 'custom'; SECTION SOURCE IS PASSED FOR EASY REFERENCE
-			var btn	=	Utils.clone(Elems.button);
-			btn.innerHTML	=	s;
-			return btn;
-		},
-		"navID"					:	false,
-		"navClass"				:	AK.prefix + "-Nav",
-		"navTrigger"			:	"click",
 		"itemsPerNav"			:	0,
 		"activeNavItemClass"	:	"active",
 		"showSectionButtons"	:	false,
@@ -153,15 +175,50 @@ var ArmyKnife	=	(function ($, window, document) {
 			// Using this.options.autoRotate as flag to continue. May change this later
 			if (typeof obj.options.autoRotate !== "undefined" && obj.options.autoRotate !== false) {
 				dir	=	obj.options.reverse !== true ? "next" : "prev";
-				window.clearTimeout(obj.delay);
-				obj.delay	=	window.setTimeout(function () {
+				win.clearTimeout(obj.delay);
+				obj.delay	=	win.setTimeout(function () {
 					obj[dir]();
 					obj.autoRotate();
 				}, obj.options.autoRotateDelay);
 			}
 		},
 		generateNav	:	function () {
-			console.log("Generating Nav");
+			var ce	=	Utils.createElem,
+				opt	=	this.options,
+				ul	=	ce("ul"),
+				placeholder;
+
+			// Go through each section
+			Utils.each(this.sections, function (i, elem) {
+
+				// Generate code and bind click
+				var li	=	ce("li"),
+					code	=	typeof opt.navItem === "function" && opt.navItem.call(this, elem, i);
+				Utils.bind(opt.navTrigger, code, function () {
+					self["goto"](i);
+					return false;
+				});
+				li.appendChild(code);
+				ul.appendChild(li);
+			});
+
+			// Add class
+			ul.setAttribute("class", opt.navClass);
+
+			// Handle this.options.navID
+			if (!!opt.navID) {
+				ul.setAttribute("id", opt.navID);
+
+				// If DOM elem exists with the same ID, replace
+				placeholder	=	Utils.find(doc, "#" + opt.navID);
+				if (!!placeholder.length) {
+					Utils.replace(placeholder, ul);
+				} else {
+					Utils.before(ul, this.elem);
+				}
+			} else {
+				Utils.before(ul, this.elem);
+			}
 		},
 		"goto"	:	function (num_index) {
 			var active		=	this.active,
@@ -178,7 +235,6 @@ var ArmyKnife	=	(function ($, window, document) {
 				&& this.autoRotate();
 		},
 		init	:	function (uOptions, callback) {
-			self	=	this;
 			var options	=	Utils.extend({}, AK.defaults, uOptions);
 
 			// Attach options and sections
@@ -212,7 +268,7 @@ var ArmyKnife	=	(function ($, window, document) {
 		}
 	};
 	return AK;
-}(jQuery, window, document));
+}(jQuery, window, document, console));
 
 /**
 *
