@@ -40,10 +40,13 @@
 			<img src="http://placehold.it/350x150&text=Img+2" />
 			<img src="http://placehold.it/350x150&text=Img+3" />
 		</div>
+		<ul id="testNav"></ul>
 		<script>
 			$("#testDiv").armyKnife({
 				generateNav	:	true,
-				autoRotate	:	true
+				autoRotate	:	true,
+				navType	:	"custom",
+				navID	:	"testNav"
 			}, function () {
 				console.log("Running callback function");
 			});
